@@ -34,6 +34,7 @@ class Vertex {
     const material = new THREE.MeshStandardMaterial({
       color: this._type === "main" ? 0x0000ff : 0x00ff00,
       transparent: true,
+      opacity: 0.6,
     });
     this._mesh = new THREE.Mesh(geometry, material);
     if (this._type === "main") this._mesh.scale.set(1.5, 1.5, 1.5);

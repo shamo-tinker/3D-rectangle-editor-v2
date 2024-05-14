@@ -7,9 +7,13 @@ import {
   getPlaneIntersectPos,
 } from "../utils/three";
 import { defaultVertextPositions } from "../constants/sceneParams";
-import { initDeepth } from "../constants";
 import { ANG2RAD } from "../utils/math";
 import Vertex from "./Vertex";
+
+export interface CubeEditorConfigParams {
+  deepth: number;
+  enableVirtualVertex: boolean;
+}
 
 class CubeEditor {
   _sceneRenderer: SceneRenderer;
@@ -22,11 +26,11 @@ class CubeEditor {
   _hoverObject: any;
   _selectObject: any;
 
-  constructor(canvasDiv: HTMLDivElement) {
+  constructor(canvasDiv: HTMLDivElement, editorParams: CubeEditorConfigParams) {
     this._sceneRenderer = new SceneRenderer(canvasDiv);
     this._raycaster = new THREE.Raycaster();
     this._virtualPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0));
-    this._deepth = initDeepth;
+    this._deepth = editorParams.deepth;
     this._vertexArray = this.getInitVertexArray();
     this._hoverObject = null;
     this._selectObject = null;
@@ -165,13 +169,13 @@ class CubeEditor {
 
     if (this._hoverObject) {
       if (!hoverMesh) {
-        this._hoverObject.material.opacity = 1;
+        this._hoverObject.material.opacity = 0.6;
         this._hoverObject = null;
         document.body.style.cursor = "";
       }
     } else {
       if (hoverMesh) {
-        hoverMesh.material.opacity = 0.5;
+        hoverMesh.material.opacity = 1;
         this._hoverObject = hoverMesh;
         document.body.style.cursor = "pointer";
       }

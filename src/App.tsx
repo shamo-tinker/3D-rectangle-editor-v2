@@ -16,8 +16,8 @@ function App() {
   const canvasRef = useRef<HTMLDivElement>(null) as any;
   const cubeRef = useRef<CubeEditor>(null) as any;
 
-  useControls(() => ({
-    value: {
+  const { deepthCont, enableVirtualVertexCont }: any = useControls(() => ({
+    Deepth: {
       value: initDeepth,
       min: 0,
       max: 10,
@@ -29,11 +29,17 @@ function App() {
         }
       },
     },
+    enableVirtualVertex: {
+      value: true,
+    },
   }));
 
   useEffect(() => {
     if (canvasRef.current) {
-      cubeRef.current = new CubeEditor(canvasRef.current);
+      cubeRef.current = new CubeEditor(canvasRef.current, {
+        deepth: deepthCont,
+        enableVirtualVertex: enableVirtualVertexCont,
+      });
     }
   }, []);
 
