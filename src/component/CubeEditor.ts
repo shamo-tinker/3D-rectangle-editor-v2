@@ -2,6 +2,7 @@ import * as THREE from "three";
 
 import SceneRenderer from "./SceneRenderer";
 import {
+  disposeMesh,
   getCenterVector,
   getHoverMesh,
   getPlaneIntersectPos,
@@ -25,6 +26,7 @@ class CubeEditor {
   _extrudeMesh: any;
   _hoverObject: any;
   _selectObject: any;
+  _enableVirtualVertext: boolean;
 
   constructor(canvasDiv: HTMLDivElement, editorParams: CubeEditorConfigParams) {
     this._sceneRenderer = new SceneRenderer(canvasDiv);
@@ -34,12 +36,11 @@ class CubeEditor {
     this._vertexArray = this.getInitVertexArray();
     this._hoverObject = null;
     this._selectObject = null;
+    this._enableVirtualVertext = editorParams.enableVirtualVertex;
 
     this.initScene();
     this.addEventListener();
   }
-
-  //Scene Settings
 
   getInitVertexArray() {
     const vArray: Vertex[] = [];
@@ -64,6 +65,8 @@ class CubeEditor {
     return vArray;
   }
 
+  // VertexGroup Part Start
+
   setVirtualVertexPos() {
     this._vertexArray.forEach((vertex: Vertex, index: number) => {
       if (vertex._type === "virtual") {
@@ -86,6 +89,9 @@ class CubeEditor {
     mainArray.forEach((vertex: Vertex, index: number) => {
       vArray.push(vertex);
       const secondPosIndex = index === mainArray.length - 1 ? 0 : index + 1;
+
+      if (vertex._isCurve || mainArray[secondPosIndex]._isCurve) return;
+
       const virtexPos = getCenterVector(
         vertex._position,
         mainArray[secondPosIndex]._position
@@ -97,11 +103,27 @@ class CubeEditor {
 
   setVertexGroup() {
     const group = new THREE.Group();
+
     this._vertexArray.forEach((vertex: Vertex) => {
-      group.add(vertex._mesh);
+      if (
+        vertex._type === "main" ||
+        (vertex._type === "virtual" && this._enableVirtualVertext === true)
+      )
+        group.add(vertex._mesh);
     });
     this._vertexGroup = group;
   }
+
+  resetVertexGroup() {
+    disposeMesh(this._vertexGroup);
+    this._sceneRenderer._scene.remove(this._vertexGroup);
+    this.setVertexGroup();
+    this._sceneRenderer._scene.add(this._vertexGroup);
+  }
+
+  // VertexGroup Part End
+
+  // ExtrudeMesh Part Start
 
   setExtrudeMesh() {
     const shape = new THREE.Shape();
@@ -109,10 +131,29 @@ class CubeEditor {
     const mainArray = this._vertexArray.filter(
       (vertex: Vertex) => vertex._type === "main"
     );
-
     const lastVertex = mainArray[mainArray.length - 1];
     shape.moveTo(lastVertex._position.x, lastVertex._position.z);
-    mainArray.forEach((vertex: Vertex) => {
+
+    mainArray.forEach((vertex: Vertex, index: number) => {
+      const beforeNodeIndex = index === 0 ? mainArray.length - 1 : index - 1;
+      if (mainArray[beforeNodeIndex]._isCurve) return;
+
+      const nextNodeIndex = index === mainArray.length - 1 ? 0 : index + 1;
+      if (vertex._isCurve) {
+        shape.splineThru([
+          new THREE.Vector2(
+            mainArray[beforeNodeIndex]._position.x,
+            mainArray[beforeNodeIndex]._position.z
+          ),
+          new THREE.Vector2(vertex._position.x, vertex._position.z),
+          new THREE.Vector2(
+            mainArray[nextNodeIndex]._position.x,
+            mainArray[nextNodeIndex]._position.z
+          ),
+        ]);
+        return;
+      }
+
       shape.lineTo(vertex._position.x, vertex._position.z);
     });
     const extrudeSettings = { depth: this._deepth, bevelEnabled: false };
@@ -125,6 +166,15 @@ class CubeEditor {
     this._extrudeMesh.rotation.x = ANG2RAD(90);
   }
 
+  resetExtrudeMesh() {
+    disposeMesh(this._extrudeMesh);
+    this._sceneRenderer._scene.remove(this._extrudeMesh);
+    this.setExtrudeMesh();
+    this._sceneRenderer._scene.add(this._extrudeMesh);
+  }
+
+  // ExtrudeMesh Part End
+
   initScene() {
     this.setVertexGroup();
     this.setExtrudeMesh();
@@ -134,11 +184,6 @@ class CubeEditor {
   }
 
   //Functions
-  resetExtrudeMesh() {
-    this._sceneRenderer._scene.remove(this._extrudeMesh);
-    this.setExtrudeMesh();
-    this._sceneRenderer._scene.add(this._extrudeMesh);
-  }
 
   setDeepth(deepth: number) {
     this._deepth = deepth;
@@ -210,14 +255,32 @@ class CubeEditor {
 
       if (hoverVertex._type === "virtual") {
         hoverVertex.changeToMain();
+        // hoverVertex._type = "main";
+        // hoverVertex.initMesh()
+
         this.resetVirtualVertexPos();
-        this._sceneRenderer._scene.remove(this._vertexGroup);
-        this.setVertexGroup();
-        this._sceneRenderer._scene.add(this._vertexGroup);
+
+        this.resetVertexGroup();
       }
 
       this._selectObject = hoverMesh;
       this._sceneRenderer._camControls.enabled = false;
+    }
+  }
+
+  // change to curve vertex
+  dblClickEventHandler(ev: MouseEvent) {
+    if (this._hoverObject) {
+      const clickVertex = this.getVertexByUuid(this._hoverObject);
+      if (clickVertex._type === "main") {
+        console.log("dblclick");
+        // clickVertex._isCurve = !clickVertex._isCurve;
+        clickVertex.changeCurveProperty(!clickVertex._isCurve);
+
+        this.resetVirtualVertexPos();
+        this.resetVertexGroup();
+        this.resetExtrudeMesh();
+      }
     }
   }
 
@@ -233,9 +296,25 @@ class CubeEditor {
       "pointerdown",
       this.mouseDownEventListner.bind(this)
     );
-  }
 
-  dispose() {}
+    document.addEventListener("dblclick", this.dblClickEventHandler.bind(this));
+  }
+  dispose() {
+    document.removeEventListener(
+      "pointerup",
+      this.moveUpEventHandler.bind(this)
+    );
+
+    document.removeEventListener(
+      "pointermove",
+      this.mouseMoveEventListner.bind(this)
+    );
+
+    document.removeEventListener(
+      "pointerdown",
+      this.mouseDownEventListner.bind(this)
+    );
+  }
 }
 
 export default CubeEditor;

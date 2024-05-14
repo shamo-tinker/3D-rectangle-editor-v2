@@ -9,11 +9,13 @@ class Vertex {
   _type: string;
   _position: THREE.Vector3;
   _mesh: any;
+  _isCurve: boolean;
   // _status: number;
 
   constructor(position: THREE.Vector3, type: "main" | "virtual") {
     this._position = position;
     this._type = type;
+    this._isCurve = false;
 
     this.initMesh();
   }
@@ -24,6 +26,11 @@ class Vertex {
     this._mesh.material.color.setHex(0x0000ff);
   }
 
+  changeCurveProperty(isCurve: boolean) {
+    this._isCurve = isCurve;
+    this._mesh.material.color.setHex(this._isCurve ? 0xff0000 : 0x0000ff);
+  }
+
   setPosition(newPos: THREE.Vector3) {
     this._position.copy(newPos);
     this._mesh.position.copy(newPos);
@@ -32,7 +39,12 @@ class Vertex {
   initMesh() {
     const geometry = new THREE.SphereGeometry(0.4);
     const material = new THREE.MeshStandardMaterial({
-      color: this._type === "main" ? 0x0000ff : 0x00ff00,
+      color:
+        this._type === "main"
+          ? this._isCurve
+            ? 0xff0000
+            : 0x0000ff
+          : 0x00ff00,
       transparent: true,
       opacity: 0.6,
     });

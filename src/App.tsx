@@ -1,24 +1,25 @@
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
-import "./styles/custom.css";
-import CubeEditor from "./component/CubeEditor";
+import { button, useControls } from "leva";
+import { GLTFExporter } from "three/examples/jsm/exporters/GLTFExporter";
+import { useEffect, useRef } from "react";
 
-import { useControls } from "leva";
+import "./styles/custom.css";
+
+import CubeEditor, { CubeEditorConfigParams } from "./component/CubeEditor";
+
 import { initDeepth } from "./constants";
+
+const initParams: CubeEditorConfigParams = {
+  deepth: initDeepth,
+  enableVirtualVertex: true,
+};
 
 function App() {
   const canvasRef = useRef<HTMLDivElement>(null) as any;
   const cubeRef = useRef<CubeEditor>(null) as any;
 
-  const { deepthCont, enableVirtualVertexCont }: any = useControls(() => ({
+  useControls(() => ({
     Deepth: {
-      value: initDeepth,
+      value: initParams.deepth,
       min: 0,
       max: 10,
       step: 1,
@@ -29,17 +30,47 @@ function App() {
         }
       },
     },
-    enableVirtualVertex: {
-      value: true,
+    EnableVirtualVertex: {
+      value: initParams.enableVirtualVertex,
+      onChange: (value: boolean) => {
+        if (cubeRef.current) {
+          cubeRef.current._enableVirtualVertext = value;
+          cubeRef.current.resetVertexGroup();
+        }
+      },
     },
+    ExportModel: button(
+      () => {
+        // console.log(123);
+        if (cubeRef.current) {
+          // console.log(cubeRef.current._sceneRenderer._scene);
+
+          const exporter = new GLTFExporter();
+          exporter.parse(
+            cubeRef.current._extrudeMesh,
+            (gltf) => {
+              const text = JSON.stringify(gltf, null, 2);
+              const blob = new Blob([text], { type: "text/plain" });
+              var link = document.createElement("a");
+              link.style.display = "none";
+              document.body.appendChild(link);
+              link.href = URL.createObjectURL(blob);
+              link.download = "3dcube.gltf";
+              link.click();
+            },
+            (err) => {
+              console.error(err);
+            }
+          );
+        }
+      },
+      { disabled: false }
+    ),
   }));
 
   useEffect(() => {
     if (canvasRef.current) {
-      cubeRef.current = new CubeEditor(canvasRef.current, {
-        deepth: deepthCont,
-        enableVirtualVertex: enableVirtualVertexCont,
-      });
+      cubeRef.current = new CubeEditor(canvasRef.current, initParams);
     }
   }, []);
 
