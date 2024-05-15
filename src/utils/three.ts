@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { GET_RANDOM_VAL_BETWEEN } from "./math";
 
 export const cleanMaterial = (material: any) => {
   material.dispose();
@@ -71,4 +72,21 @@ export const getCenterVector = (
   const newVector = new THREE.Vector3();
   newVector.addVectors(vector1, vector2).divideScalar(2);
   return newVector;
+};
+
+export const getInsidePos = (vec1: THREE.Vector3, vec2: THREE.Vector3) => {
+  const centerPos = getCenterVector(vec1, vec2);
+
+  const firstPos = new THREE.Vector3(
+    GET_RANDOM_VAL_BETWEEN(vec1.x, centerPos.x),
+    GET_RANDOM_VAL_BETWEEN(vec1.y, centerPos.y),
+    GET_RANDOM_VAL_BETWEEN(vec1.z, centerPos.z)
+  );
+
+  const secPos = new THREE.Vector3(
+    GET_RANDOM_VAL_BETWEEN(vec2.x, centerPos.x),
+    GET_RANDOM_VAL_BETWEEN(vec2.y, centerPos.y),
+    GET_RANDOM_VAL_BETWEEN(vec2.z, centerPos.z)
+  );
+  return [firstPos, secPos];
 };

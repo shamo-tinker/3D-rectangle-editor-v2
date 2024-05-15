@@ -10,13 +10,12 @@ class Vertex {
   _position: THREE.Vector3;
   _mesh: any;
   _isCurve: boolean;
-  // _status: number;
+  _curvePoints: any;
 
   constructor(position: THREE.Vector3, type: "main" | "virtual") {
     this._position = position;
     this._type = type;
     this._isCurve = false;
-
     this.initMesh();
   }
 
