@@ -273,8 +273,6 @@ class CubeEditor {
     if (this._hoverObject) {
       const clickVertex = this.getVertexByUuid(this._hoverObject);
       if (clickVertex._type === "main") {
-        console.log("dblclick");
-        // clickVertex._isCurve = !clickVertex._isCurve;
         clickVertex.changeCurveProperty(!clickVertex._isCurve);
 
         this.resetVirtualVertexPos();
