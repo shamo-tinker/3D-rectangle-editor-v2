@@ -122,6 +122,7 @@ class CubeEditor {
         (vertex._type === "virtual" && this._enableVirtualVertext === true)
       )
         group.add(vertex._mesh);
+      group.name = "main";
     });
     this._vertexGroup = group;
   }
@@ -214,13 +215,13 @@ class CubeEditor {
   setCurveVertexGroup() {
     const newGroup = new THREE.Group();
 
-    const geometry = new THREE.SphereGeometry(0.4);
-    const material = new THREE.MeshStandardMaterial({
+    const geo = new THREE.SphereGeometry(0.4);
+    const mat = new THREE.MeshStandardMaterial({
       color: 0xff0000,
       transparent: true,
       opacity: 0.6,
     });
-    const mesh = new THREE.Mesh(geometry, material);
+    const mesh = new THREE.Mesh(geo, mat);
 
     const curveVertexArray = this._vertexArray.filter(
       (vertex: Vertex) => vertex._isCurve
@@ -228,14 +229,17 @@ class CubeEditor {
 
     curveVertexArray.forEach((vertex: Vertex) => {
       const vertexMesh1 = mesh.clone();
+      vertexMesh1.material = mat.clone();
       vertexMesh1.position.copy(vertex._curvePoints[0]);
+      vertexMesh1.name = vertex._mesh.uuid;
 
       const vertexMesh2 = mesh.clone();
+      vertexMesh2.material = mat.clone();
       vertexMesh2.position.copy(vertex._curvePoints[1]);
-
+      vertexMesh2.name = vertex._mesh.uuid;
+      newGroup.name = "curve";
       newGroup.add(vertexMesh1, vertexMesh2);
     });
-
     this._curveVertexGroup = newGroup;
   }
 
@@ -308,7 +312,7 @@ class CubeEditor {
     this._sceneRenderer._scene.add(this._curveVertexGroup);
   }
 
-  //Functions start
+  ///// Functions start
 
   setDeepth(deepth: number) {
     this._deepth = deepth;
@@ -331,7 +335,7 @@ class CubeEditor {
 
   //Functions end
 
-  //EventHandler
+  ///// EventHandler
   moveUpEventHandler() {
     if (this._selectObject) {
       this._selectObject = null;
@@ -340,10 +344,6 @@ class CubeEditor {
   }
 
   mouseMoveEventListner(ev: PointerEvent) {
-    // const newGroup = new THREE.Group()
-    //   .add(this._vertexGroup)
-    //   .add(this._edgeGroup);
-
     const hoverVertex: any = getHoverMesh(
       this._raycaster,
       ev,
@@ -364,34 +364,12 @@ class CubeEditor {
       this._curveVertexGroup.children,
       this._sceneRenderer._camera
     );
-    console.log(
-      "hoverVertex=>",
-      hoverVertex,
-      "hoverCurveVertex=>",
-      hoverCurveVertex,
-      "hoverEdge=>",
-      hoverEdge
-    );
 
     const hoverMesh = hoverVertex
       ? hoverVertex
       : hoverCurveVertex
       ? hoverCurveVertex
       : hoverEdge;
-
-    // if (this._hoverObject) {
-    //   if (!hoverMesh) {
-    //     this._hoverObject.material.opacity = 0.6;
-    //     this._hoverObject = null;
-    //     document.body.style.cursor = "";
-    //   }
-    // } else {
-    //   if (hoverMesh) {
-    //     hoverMesh.material.opacity = 1;
-    //     this._hoverObject = hoverMesh;
-    //     document.body.style.cursor = "pointer";
-    //   }
-    // }
 
     if (hoverMesh) {
       hoverMesh.material.opacity = 1;
@@ -404,6 +382,8 @@ class CubeEditor {
     }
 
     if (this._selectObject) {
+      console.log(1111, this._selectObject);
+
       const planeIntersectPos = getPlaneIntersectPos(
         this._raycaster,
         ev,
@@ -411,36 +391,53 @@ class CubeEditor {
         this._sceneRenderer._camera
       );
 
-      const vertexObject: any = this.getVertexByUuid(this._selectObject.uuid);
+      if (this._selectObject.parent.name === "main") {
+        const vertexObject: any = this.getVertexByUuid(this._selectObject.uuid);
+        vertexObject.setPosition(planeIntersectPos);
+      } else if (this._selectObject.parent.name === "curve") {
+        console.log(2222222222, this._selectObject);
 
-      vertexObject.setPosition(planeIntersectPos);
+        const vertexObject: any = this.getVertexByUuid(this._selectObject.name);
+        vertexObject.changeCurvePos(this._selectObject, planeIntersectPos);
+      }
+
       this.setVirtualVertexPos();
-      this.resetExtrudeMesh();
-      this.resetEdgeGroup();
-      this.resetCurveVertexGroup();
+      // this.resetVertexGroup();
       this.resetCurveLineGroup();
+      this.resetCurveVertexGroup();
+      this.resetEdgeGroup();
+      this.resetExtrudeMesh();
     }
   }
 
   mouseDownEventListner(ev: PointerEvent) {
-    const hoverMesh: any = getHoverMesh(
+    const hoverVertexMesh: any = getHoverMesh(
       this._raycaster,
       ev,
       this._vertexGroup.children,
       this._sceneRenderer._camera
     );
+    const hoverCurveVertexMesh: any = getHoverMesh(
+      this._raycaster,
+      ev,
+      this._curveVertexGroup.children,
+      this._sceneRenderer._camera
+    );
 
-    if (hoverMesh && !this._selectObject) {
-      const hoverVertex = this.getVertexByUuid(hoverMesh.uuid);
-      console.log(hoverVertex);
+    if (hoverVertexMesh) {
+      const hoverVertex = this.getVertexByUuid(hoverVertexMesh.uuid);
 
       if (hoverVertex._type === "virtual") {
         hoverVertex.changeToMain();
         this.resetVirtualVertexPos();
         this.resetVertexGroup();
       }
+      this._selectObject = hoverVertexMesh;
+      this._sceneRenderer._camControls.enabled = false;
+    } else if (hoverCurveVertexMesh) {
+      // const hoverVertex = this.getVertexByUuid(hoverVertexMesh.uuid);?.,kjmhngbvrf
 
-      this._selectObject = hoverMesh;
+      this._selectObject = hoverCurveVertexMesh;
       this._sceneRenderer._camControls.enabled = false;
     }
   }
@@ -459,8 +456,6 @@ class CubeEditor {
           ownVertex._position,
           nextVertex._position
         );
-
-        console.log(ownVertex._curvePoints);
 
         this.resetVirtualVertexPos();
         this.resetVertexGroup();
