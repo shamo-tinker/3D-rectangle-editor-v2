@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { disposeMesh } from "../utils/three";
 
 // interface VertexDataType {
 //   position: THREE.Vector3;
@@ -11,6 +12,7 @@ class Vertex {
   _mesh: any;
   _isCurve: boolean;
   _curvePoints: any;
+  _curveVertexMeshs: any;
 
   constructor(position: THREE.Vector3, type: "main" | "virtual") {
     this._position = position;
@@ -18,6 +20,7 @@ class Vertex {
     this._isCurve = false;
 
     this.initMesh();
+    this.initCurveMesh();
   }
 
   changeToMain() {
@@ -26,15 +29,30 @@ class Vertex {
     this._mesh.material.color.setHex(0x0000ff);
   }
 
-  changeCurveProperty(isCurve: boolean) {
-    this._isCurve = isCurve;
-    this._mesh.material.color.setHex(this._isCurve ? 0xff0000 : 0x0000ff);
+  changeFromCurve() {
+    this._isCurve = false;
+    this._curvePoints = null;
+    disposeMesh(this._curveVertexMeshs[0]);
+    disposeMesh(this._curveVertexMeshs[1]);
+    this._curveVertexMeshs = null;
+  }
+
+  changeToCurve(pos1: THREE.Vector3, pos2: THREE.Vector3) {
+    this._isCurve = true;
+    this._curvePoints = [pos1, pos2];
+    this.initCurveMesh();
   }
 
   changeCurvePos(mesh: THREE.Mesh, newPos: THREE.Vector3) {
-    const index = this.findIndexOfCurvePoint(mesh.position);
+    const index = this._curveVertexMeshs.findIndex(
+      (vertexMesh: THREE.Mesh) => vertexMesh === mesh
+    );
 
     this._curvePoints[index].copy(newPos);
+    this._curveVertexMeshs[index].position.copy(newPos);
+
+    // const index = this.findIndexOfCurvePoint(mesh.position);
+    // this._curvePoints[index].copy(newPos);
   }
 
   findIndexOfCurvePoint(position: THREE.Vector3) {
@@ -51,6 +69,11 @@ class Vertex {
     this._mesh.position.copy(newPos);
   }
 
+  setCurveVertexPositions(pos1: THREE.Vector3, pos2: THREE.Vector3) {
+    this._curveVertexMeshs[0].position.copy(pos1);
+    this._curveVertexMeshs[1].position.copy(pos2);
+  }
+
   initMesh() {
     const geometry = new THREE.SphereGeometry(0.4);
     const material = new THREE.MeshStandardMaterial({
@@ -63,6 +86,29 @@ class Vertex {
     if (this._type === "main") this._mesh.scale.set(1.5, 1.5, 1.5);
 
     this._mesh.position.copy(this._position);
+  }
+
+  initCurveMesh() {
+    if (!this._isCurve) return;
+    const geo = new THREE.SphereGeometry(0.4);
+    const mat = new THREE.MeshStandardMaterial({
+      color: 0xff0000,
+      transparent: true,
+      opacity: 0.6,
+    });
+
+    const mesh = new THREE.Mesh(geo, mat);
+
+    const mesh1 = mesh;
+    mesh1.name = this._mesh.uuid;
+    mesh1.position.copy(this._curvePoints[0]);
+
+    const mesh2 = mesh.clone();
+    mesh2.material = mat.clone();
+    mesh2.name = this._mesh.uuid;
+    mesh2.position.copy(this._curvePoints[1]);
+
+    this._curveVertexMeshs = [mesh1, mesh2];
   }
 }
 

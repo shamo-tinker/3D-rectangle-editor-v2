@@ -158,7 +158,7 @@ class CubeEditor {
       }
       const geometry = new THREE.TubeGeometry(curve, 20, 0.2, 8, false);
       const material = new THREE.MeshBasicMaterial({
-        color: 0x0000ff,
+        color: vertex._isCurve ? 0xff0000 : 0x0000ff,
         side: THREE.DoubleSide,
         opacity: 0.6,
         transparent: true,
@@ -215,30 +215,14 @@ class CubeEditor {
   setCurveVertexGroup() {
     const newGroup = new THREE.Group();
 
-    const geo = new THREE.SphereGeometry(0.4);
-    const mat = new THREE.MeshStandardMaterial({
-      color: 0xff0000,
-      transparent: true,
-      opacity: 0.6,
-    });
-    const mesh = new THREE.Mesh(geo, mat);
-
     const curveVertexArray = this._vertexArray.filter(
       (vertex: Vertex) => vertex._isCurve
     );
 
     curveVertexArray.forEach((vertex: Vertex) => {
-      const vertexMesh1 = mesh.clone();
-      vertexMesh1.material = mat.clone();
-      vertexMesh1.position.copy(vertex._curvePoints[0]);
-      vertexMesh1.name = vertex._mesh.uuid;
-
-      const vertexMesh2 = mesh.clone();
-      vertexMesh2.material = mat.clone();
-      vertexMesh2.position.copy(vertex._curvePoints[1]);
-      vertexMesh2.name = vertex._mesh.uuid;
+      newGroup.add(...vertex._curveVertexMeshs);
+      this._sceneRenderer._scene.add(newGroup);
       newGroup.name = "curve";
-      newGroup.add(vertexMesh1, vertexMesh2);
     });
     this._curveVertexGroup = newGroup;
   }
@@ -332,7 +316,15 @@ class CubeEditor {
   getVertexByUuid(id: number) {
     return this._vertexArray.find((vertex: Vertex) => vertex._mesh.uuid === id);
   }
-
+  resetAll() {
+    this._vertexArray = this.getInitVertexArray();
+    this.resetVirtualVertexPos();
+    this.resetVertexGroup();
+    this.resetEdgeGroup();
+    this.resetCurveLineGroup();
+    this.resetCurveVertexGroup();
+    this.resetExtrudeMesh();
+  }
   //Functions end
 
   ///// EventHandler
@@ -382,8 +374,6 @@ class CubeEditor {
     }
 
     if (this._selectObject) {
-      console.log(1111, this._selectObject);
-
       const planeIntersectPos = getPlaneIntersectPos(
         this._raycaster,
         ev,
@@ -395,8 +385,6 @@ class CubeEditor {
         const vertexObject: any = this.getVertexByUuid(this._selectObject.uuid);
         vertexObject.setPosition(planeIntersectPos);
       } else if (this._selectObject.parent.name === "curve") {
-        console.log(2222222222, this._selectObject);
-
         const vertexObject: any = this.getVertexByUuid(this._selectObject.name);
         vertexObject.changeCurvePos(this._selectObject, planeIntersectPos);
       }
@@ -447,30 +435,24 @@ class CubeEditor {
     if (this._hoverObject) {
       if (this._hoverObject.geometry instanceof THREE.TubeGeometry) {
         const ownVertex = this.getVertexByUuid(this._hoverObject.name);
-
-        ownVertex._isCurve = true;
-
         const nextVertex = this.getNextMainVertex(ownVertex);
 
-        ownVertex._curvePoints = getInsidePos(
-          ownVertex._position,
-          nextVertex._position
-        );
+        if (ownVertex._isCurve) {
+          ownVertex.changeFromCurve();
+        } else {
+          ownVertex.changeToCurve(
+            getInsidePos(ownVertex._position, nextVertex._position)[0],
+            getInsidePos(ownVertex._position, nextVertex._position)[1]
+          );
+        }
 
         this.resetVirtualVertexPos();
         this.resetVertexGroup();
         this.resetCurveLineGroup();
+        this.resetEdgeGroup();
         this.resetExtrudeMesh();
         this.resetCurveVertexGroup();
       }
-
-      //   const clickVertex = this.getVertexByUuid(this._hoverObject);
-      //   if (clickVertex._type === "main") {
-      //     clickVertex.changeCurveProperty(!clickVertex._isCurve);
-      //     this.resetVirtualVertexPos();
-      //     this.resetVertexGroup();
-      //     this.resetExtrudeMesh();
-      //   }
     }
   }
 

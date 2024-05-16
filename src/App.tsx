@@ -66,6 +66,14 @@ function App() {
       },
       { disabled: false }
     ),
+    Reset: button(
+      () => {
+        if (cubeRef.current) {
+          cubeRef.current.resetAll();
+        }
+      },
+      { disabled: false }
+    ),
   }));
 
   useEffect(() => {
