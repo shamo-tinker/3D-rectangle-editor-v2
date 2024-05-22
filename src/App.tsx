@@ -1,6 +1,6 @@
 import { button, useControls } from "leva";
 import { GLTFExporter } from "three/examples/jsm/exporters/GLTFExporter";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import "./styles/custom.css";
 
@@ -17,8 +17,7 @@ const initParams: CubeEditorConfigParams = {
 function App() {
   const canvasRef = useRef<HTMLDivElement>(null) as any;
   const cubeRef = useRef<CubeEditor>(null) as any;
-
-  useControls(() => ({
+  const [, set] = useControls(() => ({
     Deepth: {
       value: initParams.deepth,
       min: 0,
@@ -33,15 +32,16 @@ function App() {
     },
     Width: {
       value: initParams.width,
-      onChange: (deepth: number) => {
-        // if (cubeRef.current) {
-        //   cubeRef.current._deepth = deepth;
-        //   cubeRef.current.resetExtrudeMesh();
-        // }
+
+      onChange: (width: number) => {
+        if (cubeRef.current) {
+          cubeRef.current.resetWidth(width);
+        }
       },
     },
     EnableVirtualVertex: {
       value: initParams.enableVirtualVertex,
+
       onChange: (value: boolean) => {
         if (cubeRef.current) {
           cubeRef.current._enableVirtualVertext = value;
@@ -131,9 +131,13 @@ function App() {
     ),
   }));
 
+  const setWidth = (width: number) => {
+    set({ Width: width });
+  };
+
   useEffect(() => {
     if (canvasRef.current) {
-      cubeRef.current = new CubeEditor(canvasRef.current, initParams);
+      cubeRef.current = new CubeEditor(canvasRef.current, initParams, setWidth);
     }
   }, []);
 

@@ -37,7 +37,12 @@ class CubeEditor {
   _enableVirtualVertext: boolean;
   _zLimit: Limit;
   _xLimit: Limit;
-  constructor(canvasDiv: HTMLDivElement, editorParams: CubeEditorConfigParams) {
+  _setWidthCallback: (width: number) => void;
+  constructor(
+    canvasDiv: HTMLDivElement,
+    editorParams: CubeEditorConfigParams,
+    setWidthCallback: (width: number) => void
+  ) {
     this._sceneRenderer = new SceneRenderer(canvasDiv);
     this._raycaster = new THREE.Raycaster();
     this._virtualPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0));
@@ -45,10 +50,9 @@ class CubeEditor {
     this._vertexArray = this.getInitVertexArray();
     this._hoverObject = null;
     this._selectObject = null;
-
     this._zLimit = { max: 6, min: -6 };
     this._xLimit = { max: 6, min: -6 };
-
+    this._setWidthCallback = setWidthCallback;
     this._enableVirtualVertext = editorParams.enableVirtualVertex;
 
     this.initScene();
@@ -362,6 +366,28 @@ class CubeEditor {
 
   resetAll() {
     this._vertexArray = this.getInitVertexArray();
+
+    this.resetVirtualVertexPos();
+    this.resetVertexGroup();
+    this.resetEdgeGroup();
+    this.resetCurveLineGroup();
+    this.resetCurveVertexGroup();
+    this.resetExtrudeMesh();
+  }
+
+  resetWidth(width: number) {
+    const offset = width - this._xLimit.max + this._xLimit.min;
+
+    this._vertexArray
+      .filter(
+        (vertex: Vertex) =>
+          vertex._part === "center_2" ||
+          vertex._part === "center_3" ||
+          vertex._part === "right"
+      )
+      .forEach((vertex: Vertex) => vertex.setOffsetX(offset));
+    this._xLimit.max = this._xLimit.min + width;
+
     this.resetVirtualVertexPos();
     this.resetVertexGroup();
     this.resetEdgeGroup();
@@ -470,6 +496,8 @@ class CubeEditor {
           } else {
             vertexObject.setPositionX(planeIntersectPos.x);
           }
+
+          this._setWidthCallback(this._xLimit.max - this._xLimit.min);
         } else {
           if (planeIntersectPos.z > this._zLimit.max)
             planeIntersectPos.z = this._zLimit.max;
