@@ -540,6 +540,8 @@ class CubeEditor {
     if (this._hoverObject) {
       if (this._hoverObject.geometry instanceof THREE.TubeGeometry) {
         const ownVertex = this.getVertexByUuid(this._hoverObject.name);
+
+        if (ownVertex.isCenter()) return;
         const nextVertex = this.getNextMainVertex(ownVertex);
 
         if (ownVertex._isCurve) {
