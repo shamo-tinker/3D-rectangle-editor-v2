@@ -89,6 +89,13 @@ class Vertex {
   setOffsetX(offsetX: number) {
     this._position.x += offsetX;
     this._mesh.position.x += offsetX;
+
+    if (this._isCurve) {
+      this._curvePoints[0].x += offsetX;
+      this._curveVertexMeshs[0].position.x += offsetX;
+      this._curvePoints[1].x += offsetX;
+      this._curveVertexMeshs[1].position.x += offsetX;
+    }
   }
   setCurveVertexPositions(pos1: THREE.Vector3, pos2: THREE.Vector3) {
     this._curveVertexMeshs[0].position.copy(pos1);
