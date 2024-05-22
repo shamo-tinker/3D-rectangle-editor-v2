@@ -8,15 +8,19 @@ import {
   getInsidePos,
   getPlaneIntersectPos,
 } from "../utils/three";
-import { defaultVertextPositions } from "../constants/sceneParams";
+import { defaultVertexArray1 } from "../constants/sceneParams";
 import { ANG2RAD } from "../utils/math";
 import Vertex from "./Vertex";
 
 export interface CubeEditorConfigParams {
   deepth: number;
   enableVirtualVertex: boolean;
+  width: number;
 }
-
+interface Limit {
+  min: number;
+  max: number;
+}
 class CubeEditor {
   _sceneRenderer: SceneRenderer;
   _virtualPlane: THREE.Plane;
@@ -25,13 +29,14 @@ class CubeEditor {
   _deepth: number;
   _vertexGroup: any;
   _edgeGroup: any;
-  _extrudeMesh: any;
+  _extrudeMeshGroup: any;
   _curveLineGroup: any;
   _curveVertexGroup: any;
   _hoverObject: any;
   _selectObject: any;
   _enableVirtualVertext: boolean;
-
+  _zLimit: Limit;
+  _xLimit: Limit;
   constructor(canvasDiv: HTMLDivElement, editorParams: CubeEditorConfigParams) {
     this._sceneRenderer = new SceneRenderer(canvasDiv);
     this._raycaster = new THREE.Raycaster();
@@ -40,6 +45,10 @@ class CubeEditor {
     this._vertexArray = this.getInitVertexArray();
     this._hoverObject = null;
     this._selectObject = null;
+
+    this._zLimit = { max: 6, min: -6 };
+    this._xLimit = { max: 6, min: -6 };
+
     this._enableVirtualVertext = editorParams.enableVirtualVertex;
 
     this.initScene();
@@ -49,29 +58,34 @@ class CubeEditor {
   getInitVertexArray() {
     const vArray: Vertex[] = [];
 
-    defaultVertextPositions.forEach(
-      (position: THREE.Vector3, index: number) => {
-        vArray.push(new Vertex(new THREE.Vector3().copy(position), "main"));
+    defaultVertexArray1.forEach((vertex: Vertex, index: number) => {
+      vArray.push(vertex);
 
-        vArray.push(
-          new Vertex(
-            getCenterVector(
-              position,
-              defaultVertextPositions[
-                (index + 1) % defaultVertextPositions.length
-              ]
-            ),
-            "virtual"
-          )
-        );
+      if (vertex._part === "center_1") {
+        // this._zLimit.min = vertex._position.z;
+        return;
       }
-    );
+      if (vertex._part === "center_3") {
+        // this._zLimit.max = vertex._position.z;
+        return;
+      }
+      const vertexPart =
+        vertex._part === "left" || vertex._part === "center_4"
+          ? "left"
+          : "right";
 
-    // vArray[2]._isCurve = true;
-    // vArray[2]._curvePoints = [
-    //   new THREE.Vector3(12, 0, -3),
-    //   new THREE.Vector3(12, 0, 3),
-    // ];
+      vArray.push(
+        new Vertex(
+          getCenterVector(
+            vertex._position,
+            defaultVertexArray1[(index + 1) % defaultVertexArray1.length]
+              ._position
+          ),
+          "virtual",
+          vertexPart
+        )
+      );
+    });
 
     return vArray;
   }
@@ -101,14 +115,18 @@ class CubeEditor {
       vArray.push(vertex);
 
       if (vertex._isCurve) return;
+      if (vertex._part === "center_1" || vertex._part === "center_3") return;
 
       const secondPosIndex = index === mainArray.length - 1 ? 0 : index + 1;
-
       const virtexPos = getCenterVector(
         vertex._position,
         mainArray[secondPosIndex]._position
       );
-      vArray.push(new Vertex(virtexPos, "virtual"));
+      const vertexPart =
+        vertex._part === "left" || vertex._part === "center_4"
+          ? "left"
+          : "right";
+      vArray.push(new Vertex(virtexPos, "virtual", vertexPart));
     });
     this._vertexArray = vArray;
   }
@@ -237,47 +255,72 @@ class CubeEditor {
 
   ///// ExtrudeMesh Part Start
   setExtrudeMesh() {
-    const shape = new THREE.Shape();
+    const group = new THREE.Group();
 
     const mainArray = this._vertexArray.filter(
       (vertex: Vertex) => vertex._type === "main"
     );
-    const lastVertex = mainArray[mainArray.length - 1];
-    shape.moveTo(lastVertex._position.x, lastVertex._position.z);
+    const leftArray = mainArray.filter(
+      (vertex: Vertex) =>
+        vertex._part === "left" ||
+        vertex._part === "center_1" ||
+        vertex._part === "center_4"
+    );
 
-    mainArray.forEach((vertex: Vertex, index: number) => {
-      const nextNodeIndex = index === mainArray.length - 1 ? 0 : index + 1;
+    const centerArray = mainArray.filter((vertex: Vertex) => vertex.isCenter());
 
-      if (vertex._isCurve) {
-        shape.moveTo(vertex._position.x, vertex._position.z);
-        shape.bezierCurveTo(
-          vertex._curvePoints[0].x,
-          vertex._curvePoints[0].z,
-          vertex._curvePoints[1].x,
-          vertex._curvePoints[1].z,
-          mainArray[nextNodeIndex]._position.x,
-          mainArray[nextNodeIndex]._position.z
-        );
-        return;
-      }
+    const rightArray = mainArray.filter(
+      (vertex: Vertex) =>
+        vertex._part === "right" ||
+        vertex._part === "center_2" ||
+        vertex._part === "center_3"
+    );
 
-      shape.lineTo(vertex._position.x, vertex._position.z);
+    const array = [leftArray, centerArray, rightArray];
+
+    array.forEach((array: any) => {
+      const shape = new THREE.Shape();
+      const lastVertex = array[array.length - 1];
+      shape.moveTo(lastVertex._position.x, lastVertex._position.z);
+
+      array.forEach((vertex: Vertex, index: number) => {
+        const nextNodeIndex = index === array.length - 1 ? 0 : index + 1;
+
+        if (vertex._isCurve) {
+          shape.moveTo(vertex._position.x, vertex._position.z);
+          shape.bezierCurveTo(
+            vertex._curvePoints[0].x,
+            vertex._curvePoints[0].z,
+            vertex._curvePoints[1].x,
+            vertex._curvePoints[1].z,
+            array[nextNodeIndex]._position.x,
+            array[nextNodeIndex]._position.z
+          );
+          return;
+        }
+
+        shape.lineTo(vertex._position.x, vertex._position.z);
+      });
+      const extrudeSettings = { depth: this._deepth, bevelEnabled: false };
+      const geometry = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+      const material = new THREE.MeshStandardMaterial({
+        color: 0x909090,
+        side: 2,
+      });
+
+      const extrudeMesh = new THREE.Mesh(geometry, material);
+      extrudeMesh.rotation.x = ANG2RAD(90);
+      group.add(extrudeMesh);
     });
-    const extrudeSettings = { depth: this._deepth, bevelEnabled: false };
-    const geometry = new THREE.ExtrudeGeometry(shape, extrudeSettings);
-    const material = new THREE.MeshStandardMaterial({
-      color: 0x909090,
-      side: 2,
-    });
-    this._extrudeMesh = new THREE.Mesh(geometry, material);
-    this._extrudeMesh.rotation.x = ANG2RAD(90);
+
+    this._extrudeMeshGroup = group;
   }
 
   resetExtrudeMesh() {
-    disposeMesh(this._extrudeMesh);
-    this._sceneRenderer._scene.remove(this._extrudeMesh);
+    disposeMesh(this._extrudeMeshGroup);
+    this._sceneRenderer._scene.remove(this._extrudeMeshGroup);
     this.setExtrudeMesh();
-    this._sceneRenderer._scene.add(this._extrudeMesh);
+    this._sceneRenderer._scene.add(this._extrudeMeshGroup);
   }
 
   // ExtrudeMesh Part End
@@ -291,7 +334,7 @@ class CubeEditor {
 
     this._sceneRenderer._scene.add(this._vertexGroup);
     this._sceneRenderer._scene.add(this._edgeGroup);
-    this._sceneRenderer._scene.add(this._extrudeMesh);
+    this._sceneRenderer._scene.add(this._extrudeMeshGroup);
     this._sceneRenderer._scene.add(this._curveLineGroup);
     this._sceneRenderer._scene.add(this._curveVertexGroup);
   }
@@ -316,6 +359,7 @@ class CubeEditor {
   getVertexByUuid(id: number) {
     return this._vertexArray.find((vertex: Vertex) => vertex._mesh.uuid === id);
   }
+
   resetAll() {
     this._vertexArray = this.getInitVertexArray();
     this.resetVirtualVertexPos();
@@ -325,6 +369,7 @@ class CubeEditor {
     this.resetCurveVertexGroup();
     this.resetExtrudeMesh();
   }
+
   //Functions end
 
   ///// EventHandler
@@ -383,7 +428,67 @@ class CubeEditor {
 
       if (this._selectObject.parent.name === "main") {
         const vertexObject: any = this.getVertexByUuid(this._selectObject.uuid);
-        vertexObject.setPosition(planeIntersectPos);
+        // const offserX = planeIntersectPos.x - vertexObject._position.x;
+
+        if (vertexObject.isCenter()) {
+          if (
+            vertexObject._part === "center_1" ||
+            vertexObject._part === "center_4"
+          ) {
+            if (planeIntersectPos.x > this._xLimit.max) {
+              planeIntersectPos.x = this._xLimit.max;
+            }
+            const offsetX = planeIntersectPos.x - vertexObject._position.x;
+
+            this._xLimit.min = planeIntersectPos.x;
+
+            this._vertexArray
+              .filter(
+                (vertex: Vertex) =>
+                  vertex._part === "center_1" ||
+                  vertex._part === "center_4" ||
+                  vertex._part === "left"
+              )
+              .forEach((vertex: Vertex) => vertex.setOffsetX(offsetX));
+          } else if (
+            vertexObject._part === "center_2" ||
+            vertexObject._part === "center_3"
+          ) {
+            if (planeIntersectPos.x < this._xLimit.min) {
+              planeIntersectPos.x = this._xLimit.min;
+            }
+            const offsetX = planeIntersectPos.x - vertexObject._position.x;
+            this._xLimit.max = vertexObject._position.x;
+            this._vertexArray
+              .filter(
+                (vertex: Vertex) =>
+                  vertex._part === "center_2" ||
+                  vertex._part === "center_3" ||
+                  vertex._part === "right"
+              )
+              .forEach((vertex: Vertex) => vertex.setOffsetX(offsetX));
+          } else {
+            vertexObject.setPositionX(planeIntersectPos.x);
+          }
+        } else {
+          if (planeIntersectPos.z > this._zLimit.max)
+            planeIntersectPos.z = this._zLimit.max;
+          if (planeIntersectPos.z < this._zLimit.min)
+            planeIntersectPos.z = this._zLimit.min;
+
+          if (
+            vertexObject._part === "right" &&
+            planeIntersectPos.x < this._xLimit.max
+          )
+            planeIntersectPos.x = this._xLimit.max;
+          if (
+            vertexObject._part === "left" &&
+            planeIntersectPos.x > this._xLimit.min
+          )
+            planeIntersectPos.x = this._xLimit.min;
+
+          vertexObject.setPosition(planeIntersectPos);
+        }
       } else if (this._selectObject.parent.name === "curve") {
         const vertexObject: any = this.getVertexByUuid(this._selectObject.name);
         vertexObject.changeCurvePos(this._selectObject, planeIntersectPos);

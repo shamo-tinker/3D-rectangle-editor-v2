@@ -6,7 +6,6 @@ import {
   cameraPos,
   HemiLight,
   SpotLight,
-  defaultVertextPositions,
 } from "../constants/sceneParams";
 
 // import { ANG2RAD } from "../utils/math";

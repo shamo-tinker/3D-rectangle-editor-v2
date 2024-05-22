@@ -1,10 +1,13 @@
 import * as THREE from "three";
+import Vertex from "../component/Vertex";
 
-export const defaultVertextPositions = [
-  new THREE.Vector3(-10, 0, -6),
-  new THREE.Vector3(10, 0, -6),
-  new THREE.Vector3(10, 0, 6),
-  new THREE.Vector3(-10, 0, 6),
+export const defaultVertexArray1 = [
+  new Vertex(new THREE.Vector3(-6, 0, -6), "main", "center_1"),
+  new Vertex(new THREE.Vector3(6, 0, -6), "main", "center_2"),
+  new Vertex(new THREE.Vector3(10, 0, 6), "main", "right"),
+  new Vertex(new THREE.Vector3(6, 0, 6), "main", "center_3"),
+  new Vertex(new THREE.Vector3(-6, 0, 6), "main", "center_4"),
+  new Vertex(new THREE.Vector3(-10, 0, 6), "main", "left"),
 ];
 
 export const cameraPos = {

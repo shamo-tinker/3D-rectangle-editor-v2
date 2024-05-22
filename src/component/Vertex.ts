@@ -13,12 +13,17 @@ class Vertex {
   _isCurve: boolean;
   _curvePoints: any;
   _curveVertexMeshs: any;
+  _part: string;
 
-  constructor(position: THREE.Vector3, type: "main" | "virtual") {
+  constructor(
+    position: THREE.Vector3,
+    type: "main" | "virtual",
+    part: string = "none"
+  ) {
     this._position = position;
     this._type = type;
     this._isCurve = false;
-
+    this._part = part;
     this.initMesh();
     this.initCurveMesh();
   }
@@ -27,6 +32,14 @@ class Vertex {
     this._type = "main";
     this._mesh.scale.set(1.5, 1.5, 1.5);
     this._mesh.material.color.setHex(0x0000ff);
+
+    // if(this._part === "left" || this._part === "center_4"){
+
+    // }
+    // vertex._part === "left" || vertex._part === "center_4"
+    //   ? "left"
+    //   : vertex._part === "right" ||
+    //     (vertex._part === "center_2" && "right")
   }
 
   changeFromCurve() {
@@ -68,12 +81,22 @@ class Vertex {
     this._position.copy(newPos);
     this._mesh.position.copy(newPos);
   }
+  setPositionX(newX: number) {
+    this._position.x = newX;
+    this._mesh.position.x = newX;
+  }
 
+  setOffsetX(offsetX: number) {
+    this._position.x += offsetX;
+    this._mesh.position.x += offsetX;
+  }
   setCurveVertexPositions(pos1: THREE.Vector3, pos2: THREE.Vector3) {
     this._curveVertexMeshs[0].position.copy(pos1);
     this._curveVertexMeshs[1].position.copy(pos2);
   }
-
+  isCenter() {
+    return this._part.split("_")[0] === "center";
+  }
   initMesh() {
     const geometry = new THREE.SphereGeometry(0.4);
     const material = new THREE.MeshStandardMaterial({
