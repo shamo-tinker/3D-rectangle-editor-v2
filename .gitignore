@@ -9,6 +9,11 @@
 # production
 /build
 
+# Codesandbox File
+/.codesandbox
+/.devcontainer
+dependabot.yml
+
 # Logs
 logs
 *.log
