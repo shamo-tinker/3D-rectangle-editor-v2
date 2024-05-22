@@ -11,7 +11,7 @@ import { initDeepth } from "./constants";
 const initParams: CubeEditorConfigParams = {
   deepth: initDeepth,
   enableVirtualVertex: true,
-  width: 6,
+  width: 12,
 };
 
 function App() {
