@@ -40,12 +40,14 @@ class CubeEditor {
   _xLimit: Limit;
   _enableWidth: boolean;
   _enableHeight: boolean;
-
   _setWidthCallback: (width: number) => void;
+  _setHeightCallback: (height: number) => void;
+
   constructor(
     canvasDiv: HTMLDivElement,
     editorParams: CubeEditorConfigParams,
-    setWidthCallback: (width: number) => void
+    setWidthCallback: (width: number) => void,
+    setHeightCallback: (width: number) => void
   ) {
     this._sceneRenderer = new SceneRenderer(canvasDiv);
     this._raycaster = new THREE.Raycaster();
@@ -57,6 +59,7 @@ class CubeEditor {
     this._zLimit = { max: 6, min: -6 };
     this._xLimit = { max: 6, min: -6 };
     this._setWidthCallback = setWidthCallback;
+    this._setHeightCallback = setHeightCallback;
     this._enableVirtualVertext = editorParams.enableVirtualVertex;
     this._enableWidth = false;
     this._enableHeight = false;
@@ -401,7 +404,24 @@ class CubeEditor {
     this.resetCurveVertexGroup();
     this.resetExtrudeMesh();
   }
+  resetHeight(height: number) {
+    const offset = height - this._zLimit.max + this._zLimit.min;
 
+    this._vertexArray
+      .filter(
+        (vertex: Vertex) =>
+          vertex._part === "center_1" || vertex._part === "center_2"
+      )
+      .forEach((vertex: Vertex) => vertex.setOffsetZ(-offset));
+    this._zLimit.max = this._zLimit.min + height;
+
+    this.resetVirtualVertexPos();
+    this.resetVertexGroup();
+    this.resetEdgeGroup();
+    this.resetCurveLineGroup();
+    this.resetCurveVertexGroup();
+    this.resetExtrudeMesh();
+  }
   //Functions end
 
   ///// EventHandler
@@ -542,7 +562,7 @@ class CubeEditor {
               vertexObject.setPositionX(planeIntersectPos.z);
             }
 
-            this._setWidthCallback(this._xLimit.max - this._xLimit.min);
+            this._setHeightCallback(this._zLimit.max - this._zLimit.min);
           }
         } else {
           if (planeIntersectPos.z > this._zLimit.max)

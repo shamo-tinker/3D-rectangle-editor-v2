@@ -60,6 +60,7 @@ function App() {
         disabled: !enableWidth,
         value: initParams.width,
         onChange: (width: number) => {
+          if (width < 0) width = 0;
           if (cubeRef.current) {
             cubeRef.current.resetWidth(width);
           }
@@ -78,8 +79,9 @@ function App() {
         disabled: !enableHeight,
         value: initParams.height,
         onChange: (height: number) => {
+          if (height < 0) height = 0;
           if (cubeRef.current) {
-            // cubeRef.current.resetHeight(height);
+            cubeRef.current.resetHeight(height);
           }
         },
       },
@@ -174,9 +176,18 @@ function App() {
     set({ Width: width });
   };
 
+  const setHeight = (height: number) => {
+    set({ Height: height });
+  };
+
   useEffect(() => {
     if (canvasRef.current) {
-      cubeRef.current = new CubeEditor(canvasRef.current, initParams, setWidth);
+      cubeRef.current = new CubeEditor(
+        canvasRef.current,
+        initParams,
+        setWidth,
+        setHeight
+      );
     }
   }, []);
 
