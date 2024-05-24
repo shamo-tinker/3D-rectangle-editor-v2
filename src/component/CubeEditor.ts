@@ -16,6 +16,7 @@ export interface CubeEditorConfigParams {
   deepth: number;
   enableVirtualVertex: boolean;
   width: number;
+  height: number;
 }
 interface Limit {
   min: number;
@@ -37,6 +38,9 @@ class CubeEditor {
   _enableVirtualVertext: boolean;
   _zLimit: Limit;
   _xLimit: Limit;
+  _enableWidth: boolean;
+  _enableHeight: boolean;
+
   _setWidthCallback: (width: number) => void;
   constructor(
     canvasDiv: HTMLDivElement,
@@ -54,6 +58,8 @@ class CubeEditor {
     this._xLimit = { max: 6, min: -6 };
     this._setWidthCallback = setWidthCallback;
     this._enableVirtualVertext = editorParams.enableVirtualVertex;
+    this._enableWidth = false;
+    this._enableHeight = false;
 
     this.initScene();
     this.addEventListener();
@@ -457,47 +463,87 @@ class CubeEditor {
         // const offserX = planeIntersectPos.x - vertexObject._position.x;
 
         if (vertexObject.isCenter()) {
-          if (
-            vertexObject._part === "center_1" ||
-            vertexObject._part === "center_4"
-          ) {
-            if (planeIntersectPos.x > this._xLimit.max) {
-              planeIntersectPos.x = this._xLimit.max;
-            }
-            const offsetX = planeIntersectPos.x - vertexObject._position.x;
+          if (this._enableWidth) {
+            if (
+              vertexObject._part === "center_1" ||
+              vertexObject._part === "center_4"
+            ) {
+              if (planeIntersectPos.x > this._xLimit.max) {
+                planeIntersectPos.x = this._xLimit.max;
+              }
+              const offsetX = planeIntersectPos.x - vertexObject._position.x;
 
-            this._xLimit.min = planeIntersectPos.x;
+              this._xLimit.min = planeIntersectPos.x;
 
-            this._vertexArray
-              .filter(
-                (vertex: Vertex) =>
-                  vertex._part === "center_1" ||
-                  vertex._part === "center_4" ||
-                  vertex._part === "left"
-              )
-              .forEach((vertex: Vertex) => vertex.setOffsetX(offsetX));
-          } else if (
-            vertexObject._part === "center_2" ||
-            vertexObject._part === "center_3"
-          ) {
-            if (planeIntersectPos.x < this._xLimit.min) {
-              planeIntersectPos.x = this._xLimit.min;
+              this._vertexArray
+                .filter(
+                  (vertex: Vertex) =>
+                    vertex._part === "center_1" ||
+                    vertex._part === "center_4" ||
+                    vertex._part === "left"
+                )
+                .forEach((vertex: Vertex) => vertex.setOffsetX(offsetX));
+            } else if (
+              vertexObject._part === "center_2" ||
+              vertexObject._part === "center_3"
+            ) {
+              if (planeIntersectPos.x < this._xLimit.min) {
+                planeIntersectPos.x = this._xLimit.min;
+              }
+              const offsetX = planeIntersectPos.x - vertexObject._position.x;
+              this._xLimit.max = vertexObject._position.x;
+              this._vertexArray
+                .filter(
+                  (vertex: Vertex) =>
+                    vertex._part === "center_2" ||
+                    vertex._part === "center_3" ||
+                    vertex._part === "right"
+                )
+                .forEach((vertex: Vertex) => vertex.setOffsetX(offsetX));
+            } else {
+              vertexObject.setPositionX(planeIntersectPos.x);
             }
-            const offsetX = planeIntersectPos.x - vertexObject._position.x;
-            this._xLimit.max = vertexObject._position.x;
-            this._vertexArray
-              .filter(
-                (vertex: Vertex) =>
-                  vertex._part === "center_2" ||
-                  vertex._part === "center_3" ||
-                  vertex._part === "right"
-              )
-              .forEach((vertex: Vertex) => vertex.setOffsetX(offsetX));
-          } else {
-            vertexObject.setPositionX(planeIntersectPos.x);
+
+            this._setWidthCallback(this._xLimit.max - this._xLimit.min);
           }
 
-          this._setWidthCallback(this._xLimit.max - this._xLimit.min);
+          if (this._enableHeight) {
+            if (
+              vertexObject._part === "center_1" ||
+              vertexObject._part === "center_2"
+            ) {
+              if (planeIntersectPos.z > this._zLimit.max) {
+                planeIntersectPos.z = this._zLimit.max;
+              }
+              const offsetZ = planeIntersectPos.z - vertexObject._position.z;
+              this._zLimit.min = planeIntersectPos.z;
+              this._vertexArray
+                .filter(
+                  (vertex: Vertex) =>
+                    vertex._part === "center_1" || vertex._part === "center_2"
+                )
+                .forEach((vertex: Vertex) => vertex.setOffsetZ(offsetZ));
+            } else if (
+              vertexObject._part === "center_3" ||
+              vertexObject._part === "center_4"
+            ) {
+              if (planeIntersectPos.z < this._zLimit.min) {
+                planeIntersectPos.z = this._zLimit.min;
+              }
+              const offsetZ = planeIntersectPos.z - vertexObject._position.z;
+              this._zLimit.max = vertexObject._position.z;
+              this._vertexArray
+                .filter(
+                  (vertex: Vertex) =>
+                    vertex._part === "center_3" || vertex._part === "center_4"
+                )
+                .forEach((vertex: Vertex) => vertex.setOffsetZ(offsetZ));
+            } else {
+              vertexObject.setPositionX(planeIntersectPos.z);
+            }
+
+            this._setWidthCallback(this._xLimit.max - this._xLimit.min);
+          }
         } else {
           if (planeIntersectPos.z > this._zLimit.max)
             planeIntersectPos.z = this._zLimit.max;
