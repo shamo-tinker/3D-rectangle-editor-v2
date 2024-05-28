@@ -1,5 +1,5 @@
 import * as THREE from "three";
-
+import { PointTextHelper } from "@jniac/three-point-text-helper";
 import SceneRenderer from "./SceneRenderer";
 import {
   disposeMesh,
@@ -9,7 +9,7 @@ import {
   getPlaneIntersectPos,
 } from "../utils/three";
 import { defaultVertexArray1 } from "../constants/sceneParams";
-import { ANG2RAD } from "../utils/math";
+import { ANG2RAD, RAD2ANG } from "../utils/math";
 import Vertex from "./Vertex";
 
 export interface CubeEditorConfigParams {
@@ -22,6 +22,7 @@ interface Limit {
   min: number;
   max: number;
 }
+
 class CubeEditor {
   _sceneRenderer: SceneRenderer;
   _virtualPlane: THREE.Plane;
@@ -40,6 +41,7 @@ class CubeEditor {
   _xLimit: Limit;
   _enableWidth: boolean;
   _enableHeight: boolean;
+  _angleHelper: any;
   _setWidthCallback: (width: number) => void;
   _setHeightCallback: (height: number) => void;
 
@@ -82,6 +84,7 @@ class CubeEditor {
         // this._zLimit.max = vertex._position.z;
         return;
       }
+
       const vertexPart =
         vertex._part === "left" || vertex._part === "center_4"
           ? "left"
@@ -338,18 +341,72 @@ class CubeEditor {
 
   // ExtrudeMesh Part End
 
+  ///// AngleHelper Part Start
+  setAngleHelper() {
+    const newAngleHelper: any = new PointTextHelper({ charMax: 3 });
+
+    // newAngleHelper.material.depthTest = false;
+    newAngleHelper.renderOrder = 100;
+
+    console.log(newAngleHelper);
+    console.log(newAngleHelper.material);
+
+    const aLength = this._vertexArray.length;
+
+    this._vertexArray.forEach((vertex: Vertex, index: number) => {
+      const lastIndex = index === 0 ? aLength - 1 : index - 1;
+
+      if (
+        vertex._type === "virtual" ||
+        vertex._isCurve === true ||
+        this._vertexArray[lastIndex]._isCurve === true
+      )
+        return;
+
+      const nextIndex = index === aLength - 1 ? 0 : index + 1;
+      const lastPos = this._vertexArray[lastIndex]._position;
+      const nextPos = this._vertexArray[nextIndex]._position;
+      const vec1 = new THREE.Vector3().subVectors(lastPos, vertex._position);
+      const vec2 = new THREE.Vector3().subVectors(nextPos, vertex._position);
+      const angle = Math.round(RAD2ANG(vec1.angleTo(vec2)));
+      if (angle === 180) return;
+      newAngleHelper.display({
+        text: `${angle}`,
+        color: "red",
+        size: 1,
+        position: vertex._position,
+        // position: new THREE.Vector3()
+        //   .copy(vertex._position)
+        //   .add(new THREE.Vector3(0, 5, 0)),
+      });
+    });
+
+    this._angleHelper = newAngleHelper;
+  }
+
+  resetAngleHelper() {
+    disposeMesh(this._angleHelper);
+    this._sceneRenderer._scene.remove(this._angleHelper);
+    this.setAngleHelper();
+    this._sceneRenderer._scene.add(this._angleHelper);
+  }
+
+  // AngleHelper Part End
+
   initScene() {
     this.setVertexGroup();
     this.setExtrudeMesh();
     this.setEdgeGroup();
     this.setCurveLineGroup();
     this.setCurveVertexGroup();
+    this.setAngleHelper();
 
     this._sceneRenderer._scene.add(this._vertexGroup);
     this._sceneRenderer._scene.add(this._edgeGroup);
     this._sceneRenderer._scene.add(this._extrudeMeshGroup);
     this._sceneRenderer._scene.add(this._curveLineGroup);
     this._sceneRenderer._scene.add(this._curveVertexGroup);
+    this._sceneRenderer._scene.add(this._angleHelper);
   }
 
   ///// Functions start
@@ -590,6 +647,7 @@ class CubeEditor {
 
       this.setVirtualVertexPos();
       // this.resetVertexGroup();
+      this.resetAngleHelper();
       this.resetCurveLineGroup();
       this.resetCurveVertexGroup();
       this.resetEdgeGroup();
@@ -635,7 +693,9 @@ class CubeEditor {
       if (this._hoverObject.geometry instanceof THREE.TubeGeometry) {
         const ownVertex = this.getVertexByUuid(this._hoverObject.name);
 
-        if (ownVertex.isCenter()) return;
+        if (ownVertex.part === "center1" || ownVertex.part === "center3")
+          return;
+        console.log("dbclick");
         const nextVertex = this.getNextMainVertex(ownVertex);
 
         if (ownVertex._isCurve) {

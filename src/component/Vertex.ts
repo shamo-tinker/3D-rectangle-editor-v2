@@ -14,6 +14,7 @@ class Vertex {
   _curvePoints: any;
   _curveVertexMeshs: any;
   _part: string;
+  _angle: number | undefined;
 
   constructor(
     position: THREE.Vector3,
@@ -114,6 +115,11 @@ class Vertex {
     this._curveVertexMeshs[0].position.copy(pos1);
     this._curveVertexMeshs[1].position.copy(pos2);
   }
+
+  setAngle(angle: number) {
+    this._angle = angle;
+  }
+
   isCenter() {
     return this._part.split("_")[0] === "center";
   }
