@@ -343,13 +343,11 @@ class CubeEditor {
 
   ///// AngleHelper Part Start
   setAngleHelper() {
-    const newAngleHelper: any = new PointTextHelper({ charMax: 3 });
+    const newAngleHelper = new PointTextHelper({ charMax: 3 });
 
-    // newAngleHelper.material.depthTest = false;
+    newAngleHelper.material.depthTest = false;
+    newAngleHelper.material.transparent = true;
     newAngleHelper.renderOrder = 100;
-
-    console.log(newAngleHelper);
-    console.log(newAngleHelper.material);
 
     const aLength = this._vertexArray.length;
 
@@ -372,7 +370,7 @@ class CubeEditor {
       if (angle === 180) return;
       newAngleHelper.display({
         text: `${angle}`,
-        color: "red",
+        color: "white",
         size: 1,
         position: vertex._position,
         // position: new THREE.Vector3()
@@ -680,7 +678,7 @@ class CubeEditor {
       this._selectObject = hoverVertexMesh;
       this._sceneRenderer._camControls.enabled = false;
     } else if (hoverCurveVertexMesh) {
-      // const hoverVertex = this.getVertexByUuid(hoverVertexMesh.uuid);?.,kjmhngbvrf
+      // const hoverVertex = this.getVertexByUuid(hoverVertexMesh.uuid);
 
       this._selectObject = hoverCurveVertexMesh;
       this._sceneRenderer._camControls.enabled = false;
@@ -693,9 +691,9 @@ class CubeEditor {
       if (this._hoverObject.geometry instanceof THREE.TubeGeometry) {
         const ownVertex = this.getVertexByUuid(this._hoverObject.name);
 
-        if (ownVertex.part === "center1" || ownVertex.part === "center3")
+        if (ownVertex._part === "center_1" || ownVertex.part === "center_3")
           return;
-        console.log("dbclick");
+
         const nextVertex = this.getNextMainVertex(ownVertex);
 
         if (ownVertex._isCurve) {
