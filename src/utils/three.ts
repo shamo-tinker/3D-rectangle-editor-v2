@@ -90,3 +90,7 @@ export const getInsidePos = (vec1: THREE.Vector3, vec2: THREE.Vector3) => {
   );
   return [firstPos, secPos];
 };
+export const isReflexAngle = (vec: THREE.Vector3, addVec: THREE.Vector3) => {
+  if (addVec.x * vec.z - addVec.z * vec.x < 0) return true;
+  return false;
+};

@@ -7,6 +7,7 @@ import {
   getHoverMesh,
   getInsidePos,
   getPlaneIntersectPos,
+  isReflexAngle,
 } from "../utils/three";
 import { defaultVertexArray1 } from "../constants/sceneParams";
 import { ANG2RAD, RAD2ANG } from "../utils/math";
@@ -42,6 +43,7 @@ class CubeEditor {
   _enableWidth: boolean;
   _enableHeight: boolean;
   _angleHelper: any;
+  _angleArcGroup: any;
   _setWidthCallback: (width: number) => void;
   _setHeightCallback: (height: number) => void;
 
@@ -338,18 +340,19 @@ class CubeEditor {
     this.setExtrudeMesh();
     this._sceneRenderer._scene.add(this._extrudeMeshGroup);
   }
-
   // ExtrudeMesh Part End
 
   ///// AngleHelper Part Start
   setAngleHelper() {
     const newAngleHelper = new PointTextHelper({ charMax: 3 });
-
+    const newAngleGroup = new THREE.Group();
     newAngleHelper.material.depthTest = false;
     newAngleHelper.material.transparent = true;
     newAngleHelper.renderOrder = 100;
 
     const aLength = this._vertexArray.length;
+
+    const lineMat = new THREE.LineBasicMaterial({ color: 0xff0000 });
 
     this._vertexArray.forEach((vertex: Vertex, index: number) => {
       const lastIndex = index === 0 ? aLength - 1 : index - 1;
@@ -366,8 +369,16 @@ class CubeEditor {
       const nextPos = this._vertexArray[nextIndex]._position;
       const vec1 = new THREE.Vector3().subVectors(lastPos, vertex._position);
       const vec2 = new THREE.Vector3().subVectors(nextPos, vertex._position);
-      const angle = Math.round(RAD2ANG(vec1.angleTo(vec2)));
+      const vec3 = new THREE.Vector3().addVectors(vec1.negate(), vec2);
+
+      const rad = isReflexAngle(vec1.negate(), vec3)
+        ? Math.PI * 2 - vec1.angleTo(vec2)
+        : vec1.angleTo(vec2);
+
+      const angle = Math.round(RAD2ANG(rad));
+
       if (angle === 180) return;
+
       newAngleHelper.display({
         text: `${angle}`,
         color: "white",
@@ -377,16 +388,44 @@ class CubeEditor {
         //   .copy(vertex._position)
         //   .add(new THREE.Vector3(0, 5, 0)),
       });
+
+      // if (index !== 0) return;
+
+      const radius = 1;
+
+      const curve = new THREE.EllipseCurve(
+        vertex._position.x,
+        vertex._position.z,
+        radius,
+        radius,
+        0,
+        rad,
+        false,
+        vec2.z < 0
+          ? Math.PI * 2 - vec2.angleTo(new THREE.Vector3(1, 0, 0))
+          : vec2.angleTo(new THREE.Vector3(1, 0, 0))
+      );
+
+      const points = curve.getPoints(angle * 0.3);
+      const geometry = new THREE.BufferGeometry().setFromPoints(points);
+      const ellipse = new THREE.Line(geometry, lineMat);
+      newAngleGroup.add(ellipse);
     });
 
+    newAngleGroup.rotateX(Math.PI / 2);
+    newAngleGroup.position.setY(0.1);
+    this._angleArcGroup = newAngleGroup;
     this._angleHelper = newAngleHelper;
   }
 
   resetAngleHelper() {
     disposeMesh(this._angleHelper);
+    disposeMesh(this._angleArcGroup);
     this._sceneRenderer._scene.remove(this._angleHelper);
+    this._sceneRenderer._scene.remove(this._angleArcGroup);
     this.setAngleHelper();
     this._sceneRenderer._scene.add(this._angleHelper);
+    this._sceneRenderer._scene.add(this._angleArcGroup);
   }
 
   // AngleHelper Part End
@@ -405,6 +444,7 @@ class CubeEditor {
     this._sceneRenderer._scene.add(this._curveLineGroup);
     this._sceneRenderer._scene.add(this._curveVertexGroup);
     this._sceneRenderer._scene.add(this._angleHelper);
+    this._sceneRenderer._scene.add(this._angleArcGroup);
   }
 
   ///// Functions start
@@ -711,6 +751,7 @@ class CubeEditor {
         this.resetEdgeGroup();
         this.resetExtrudeMesh();
         this.resetCurveVertexGroup();
+        this.resetAngleHelper();
       }
     }
   }
